@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 import os
 import shutil
 import subprocess
+import uuid
 
 app = FastAPI()
 
@@ -11,16 +12,19 @@ OUTPUT_DIR = "/workspace/PDF_Folder"
 
 @app.post("/convert/")
 async def convert_hwp(file: UploadFile = File(...)):
-    # 1. 저장 경로 설정
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    pdf_name = file.filename.replace('.hwp', '.pdf')
-    pdf_path = os.path.join(OUTPUT_DIR, pdf_name)
 
-    # 2. 파일 저장
+    temp_filename = f"{uuid.uuid4().hex}.hwp"
+    file_path = os.path.join(UPLOAD_DIR, temp_filename)
+
+    output_pdf_path = os.path.join(OUTPUT_DIR, temp_filename.replace('.hwp', '.pdf'))
+
+    max_len = 100
+    base_name, ext = os.path.splitext(file.filename)
+    safe_filename = base_name[:max_len] + '.pdf'
+
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # 3. LibreOffice 실행
     result = subprocess.run([
         "libreoffice", "--headless", "--convert-to", "pdf", file_path, "--outdir", OUTPUT_DIR
     ], capture_output=True, encoding='utf-8')
@@ -28,5 +32,10 @@ async def convert_hwp(file: UploadFile = File(...)):
     if result.returncode != 0:
         return {"error": "PDF 변환 실패", "details": result.stderr}
 
-    # 4. 클라이언트에게 PDF 반환
-    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_name)
+
+    return FileResponse(
+        output_pdf_path,
+        media_type="application/pdf",
+        filename=safe_filename
+    )
+
