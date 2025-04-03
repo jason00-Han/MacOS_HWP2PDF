@@ -1,23 +1,24 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse
 import os
 import shutil
 import subprocess
 import uuid
-
+#10.106.6.34 ip
 app = FastAPI()
 
 UPLOAD_DIR = "/workspace/Hwp_Folder"
 OUTPUT_DIR = "/workspace/PDF_Folder"
 
 @app.post("/convert/")
-async def convert_hwp(file: UploadFile = File(...)):
+async def convert_hwp(file: UploadFile = File(...), object_key: str = Form(...)):
 
     temp_filename = f"{uuid.uuid4().hex}.hwp"
     file_path = os.path.join(UPLOAD_DIR, temp_filename)
 
     output_pdf_path = os.path.join(OUTPUT_DIR, temp_filename.replace('.hwp', '.pdf'))
 
+    #이름이 너무 길어서 생기는 문제 해결
     max_len = 100
     base_name, ext = os.path.splitext(file.filename)
     safe_filename = base_name[:max_len] + '.pdf'
@@ -32,10 +33,10 @@ async def convert_hwp(file: UploadFile = File(...)):
     if result.returncode != 0:
         return {"error": "PDF 변환 실패", "details": result.stderr}
 
-
-    return FileResponse(
+    response = FileResponse(
         output_pdf_path,
         media_type="application/pdf",
         filename=safe_filename
     )
-
+    response.headers["X-Object-Key"] = object_key
+    return response
