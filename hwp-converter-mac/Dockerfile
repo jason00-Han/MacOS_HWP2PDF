@@ -21,7 +21,7 @@ WORKDIR /workspace
 # FastAPI 서버 및 파일 포함
 COPY . .
 
-RUN pip3 install --break-system-packages fastapi uvicorn python-multipart
+RUN pip3 install --break-system-packages fastapi uvicorn python-multipart minio
 
 EXPOSE 8000
 
